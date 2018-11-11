@@ -9,6 +9,7 @@
 #include "hash.h" // hash.h must be in the current directory
 using namespace std;
 
+__device__ std::bitset<352> prepend_bit_device;
 
 // Helper functions
 const char* hex_char_to_bin(char c) {
@@ -43,16 +44,21 @@ std::string hex_str_to_bin_str(const std::string& hex)
 }
 
 // Parallel code/functions
-__global__ void find_nonce() {
-    
+__global__ void find_nonce(std::bitset<352>prepend_bit) {
     printf("Thread ID: %d\n", threadIdx.x);
     // Step 1: Calculate the value of X which is 416 bit in length and defined as:
     // (416, 384] t --> Unix timestamp (seconds since UNIX epoch), unsigned 32-bit number.
     // [383, 128] previous_digest --> 256 bits given as input
     // [127, 64] id -->  NUSNET ID "E0003049" in char representation
     // [63, 0] nonce --> unsigned 64-bit number. Can be in the range of [2^64 - 1, 0]. This is what we have to find
-
+    // Each thread will be calculating 1 nonce.
+    long nonce = blockIdx.x * blockDim.x + threadIdx.x;
+    std::bitset<64> nonce_bit(nonce);
+    std::bitset<416> x(prepend_bit_device + nonce_bit);
     // Step 2: Hash SHA256(X)
+    //__device__ void sha256(uint8_t hash[32], const uint8_t * input, size_t len);
+    uint8_t hash_res[32]; 
+    hash.sha256(hash_res, x, sizeof(x));
 
     // Step 3: Get first 64-bits of the digest SHA256(X)
     
@@ -99,6 +105,10 @@ int main(int argc, char **argv) {
                 previous_digest_bit.to_string() +
                 id_bit.to_string()
             );
+            rc = cudaMemcpyToSymbol(prepend_bit, prepend_bit_device, sizeof(prepend_bit_device));
+            if (rc != cudaSuccess) {
+                printf("Could not copy to device. Reason %s\n", cudaGetErrorString(rc));
+            }
             // cout << t_bit << "\n";
             // cout << previous_digest_bit << "\n";
             // cout << id_bit << "\n";
