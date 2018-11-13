@@ -5,11 +5,12 @@
 #include <stdio.h>
 #include <fstream>
 #include <ctime>
+#include <cmath>
 
 #include "hash.h" // hash.h must be in the current directory
 using namespace std;
 
-__device__ std::bitset<352> prepend_bit_device;
+__device__ uint8_t device_prepend_byte_array[44];
 
 // Helper functions
 const char* hex_char_to_bin(char c) {
@@ -44,21 +45,24 @@ std::string hex_str_to_bin_str(const std::string& hex)
 }
 
 // Parallel code/functions
-__global__ void find_nonce(std::bitset<352>prepend_bit) {
+__global__ void find_nonce() {
     printf("Thread ID: %d\n", threadIdx.x);
+    printf("The value here: %d\n", device_prepend_byte_array[0]);
     // Step 1: Calculate the value of X which is 416 bit in length and defined as:
     // (416, 384] t --> Unix timestamp (seconds since UNIX epoch), unsigned 32-bit number.
     // [383, 128] previous_digest --> 256 bits given as input
     // [127, 64] id -->  NUSNET ID "E0003049" in char representation
     // [63, 0] nonce --> unsigned 64-bit number. Can be in the range of [2^64 - 1, 0]. This is what we have to find
+
     // Each thread will be calculating 1 nonce.
-    long nonce = blockIdx.x * blockDim.x + threadIdx.x;
-    std::bitset<64> nonce_bit(nonce);
-    std::bitset<416> x(prepend_bit_device + nonce_bit);
+    // long nonce = blockIdx.x * blockDim.x + threadIdx.x;
+    // std::bitset<64> nonce_bit(nonce);
+    // std::bitset<416> x(prepend_bit_device + nonce_bit);
+
     // Step 2: Hash SHA256(X)
     //__device__ void sha256(uint8_t hash[32], const uint8_t * input, size_t len);
-    uint8_t hash_res[32]; 
-    hash.sha256(hash_res, x, sizeof(x));
+    // uint8_t hash_res[32]; 
+    // hash.sha256(hash_res, x, sizeof(x));
 
     // Step 3: Get first 64-bits of the digest SHA256(X)
     
@@ -105,18 +109,32 @@ int main(int argc, char **argv) {
                 previous_digest_bit.to_string() +
                 id_bit.to_string()
             );
-            rc = cudaMemcpyToSymbol(prepend_bit, prepend_bit_device, sizeof(prepend_bit_device));
+
+            // Convert bitset to a uint_8t array
+            uint8_t prepend_array[44];
+            for (int i = 0; i < prepend_bit.size() - 7; i += 8) {
+                int byte_value = 
+                    prepend_bit.test(i) * pow(2, 7)+
+                    prepend_bit.test(i+1) * pow(2, 6)+
+                    prepend_bit.test(i+2) * pow(2, 5)+
+                    prepend_bit.test(i+3) * pow(2, 4)+
+                    prepend_bit.test(i+4) * pow(2, 3)+
+                    prepend_bit.test(i+5) * pow(2, 2)+
+                    prepend_bit.test(i+6) * pow(2, 1)+
+                    prepend_bit.test(i+7);
+                uint8_t byte_value_uint8 = byte_value;
+                int index = i / 8;
+                prepend_array[index] = byte_value_uint8;
+
+            }
+            printf("> Pre-processing done\n");
+            cudaError_t rc = cudaMemcpyToSymbol(device_prepend_byte_array, &prepend_array, sizeof(device_prepend_byte_array));
             if (rc != cudaSuccess) {
                 printf("Could not copy to device. Reason %s\n", cudaGetErrorString(rc));
             }
-            // cout << t_bit << "\n";
-            // cout << previous_digest_bit << "\n";
-            // cout << id_bit << "\n";
-            // cout << prepend_bit << "\n";
-            printf("> Pre-processing done\n");
-            printf("> Passing 352-bitset to threads to find nonce");
-            // find_nonce<<<1, 1>>>(); // (num_thread_blocks, num_threads/block)
-            // cudaDeviceSynchronize(); // Waits for all CUDA threads to complete.
+            printf("> Passing 352-bitset to threads to find nonce\n");
+            find_nonce<<<1, 1>>>(); // (num_thread_blocks, num_threads/block)
+            cudaDeviceSynchronize(); // Waits for all CUDA threads to complete.
         }
         file.close();
     }
