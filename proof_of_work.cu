@@ -11,6 +11,13 @@
 using namespace std;
 
 __device__ uint8_t device_prepend_byte_array[44];
+__device__ unsigned long long n;
+// These 2 variables will only be set once an answer is found by a thread.
+// Copy these values back into host.
+__device__ long long nonce_answer;
+__device__ uint8_t digest_answer[32];
+__device__ bool found_res;
+
 
 // Helper functions
 const char* hex_char_to_bin(char c) {
@@ -48,15 +55,14 @@ std::string hex_str_to_bin_str(const std::string& hex)
 __global__ void find_nonce() {
     printf("Thread ID: %d\n", threadIdx.x);
     printf("The value here: %d\n", device_prepend_byte_array[0]);
+    found_res = false;
     // Step 1: Calculate the value of X which is 416 bit in length and defined as:
     // (416, 384] t --> Unix timestamp (seconds since UNIX epoch), unsigned 32-bit number.
     // [383, 128] previous_digest --> 256 bits given as input
     // [127, 64] id -->  NUSNET ID "E0003049" in char representation
     // [63, 0] nonce --> unsigned 64-bit number. Can be in the range of [2^64 - 1, 0]. This is what we have to find
     long long nonce = blockDim.x * blockIdx.x + threadIdx.x;
-    printf("Nonce value = %d\n ", nonce);
     uint8_t nonce_bytes[8];
-    // First 8 bits of the nonce.
     int mask = 0xFF;
     // Reversed due to big endianness
     nonce_bytes[7] = (int)(nonce & mask);
@@ -100,6 +106,12 @@ __global__ void find_nonce() {
     printf("digest = %lu\n ", digest);
     
     // Step 4: Compare with "n" to see if it can be accepted
+    // TODO(lowjiansheng): pass these values back to host
+    if (digest < n) {
+        found_res = true;
+        nonce_answer = nonce;
+        digest_answer = hash_res;
+    }
 }
 
 int main(int argc, char **argv) {
@@ -166,6 +178,7 @@ int main(int argc, char **argv) {
                 printf("Could not copy to device. Reason %s\n", cudaGetErrorString(rc));
             }
             printf("> Passing 352-bitset to threads to find nonce\n");
+            // TODO(lowjiansheng): Find some way to check if a thread has found the answer. Once found terminate and return.
             find_nonce<<<1, 2>>>(); // (num_thread_blocks, num_threads/block)
             cudaDeviceSynchronize(); // Waits for all CUDA threads to complete.
         }
