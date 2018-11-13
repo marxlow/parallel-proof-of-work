@@ -10,13 +10,14 @@
 #include "hash.h" // hash.h must be in the current directory
 using namespace std;
 
-__device__ uint8_t device_prepend_byte_array[44];
-__device__ unsigned long long n;
+
+__device__ __managed__ uint8_t unified_prepend_byte_array[44];
+// __device__ __managed__ unsigned long long unified_n_decimal;
 // These 2 variables will only be set once an answer is found by a thread.
 // Copy these values back into host.
-__device__ long long nonce_answer;
-__device__ uint8_t digest_answer[32];
-__device__ bool found_res;
+__device__ __managed__ unsigned long long unified_nonce_answer;
+__device__ __managed__ uint8_t unified_digest_answer[32];
+__device__ __managed__ bool unified_found_res;
 
 
 // Helper functions
@@ -52,16 +53,11 @@ std::string hex_str_to_bin_str(const std::string& hex)
 }
 
 // Parallel code/functions
-__global__ void find_nonce() {
-    printf("Thread ID: %d\n", threadIdx.x);
-    printf("The value here: %d\n", device_prepend_byte_array[0]);
-    found_res = false;
-    // Step 1: Calculate the value of X which is 416 bit in length and defined as:
+__device__ void get_x(uint8_t x[52], unsigned long long nonce) {
     // (416, 384] t --> Unix timestamp (seconds since UNIX epoch), unsigned 32-bit number.
     // [383, 128] previous_digest --> 256 bits given as input
     // [127, 64] id -->  NUSNET ID "E0003049" in char representation
     // [63, 0] nonce --> unsigned 64-bit number. Can be in the range of [2^64 - 1, 0]. This is what we have to find
-    long long nonce = blockDim.x * blockIdx.x + threadIdx.x;
     uint8_t nonce_bytes[8];
     int mask = 0xFF;
     // Reversed due to big endianness
@@ -73,19 +69,12 @@ __global__ void find_nonce() {
     nonce_bytes[2] = (int)((nonce>>40) & mask);
     nonce_bytes[1] = (int)((nonce>>48) & mask);
     nonce_bytes[0] = (int)((nonce>>56) & mask);
-    uint8_t x[52];
-    for (int i = 0 ; i < 44; i++) {
-        x[i] = device_prepend_byte_array[i];
-    }
     for (int i = 44; i < 52; i++) {
         x[i] = nonce_bytes[i - 44];
     }
-    // Step 2: Hash SHA256(X)
-    //__device__ void hash.sha256(uint8_t hash[32], const uint8_t * input, size_t len);
-    uint8_t hash_res[32]; 
-    sha256(hash_res, x, sizeof(x));
+}
 
-    // Step 3: Get first 64-bits of the digest SHA256(X)
+__device__ unsigned long long hash_to_decimal(uint8_t hash_res[32]) {
     unsigned long long digest = 0; 
     unsigned long long hash_res_long = (unsigned long long)(hash_res[0]);
     digest += hash_res_long<<56;
@@ -102,35 +91,78 @@ __global__ void find_nonce() {
     hash_res_long = (unsigned long long)(hash_res[6]);
     digest += hash_res_long<<8;  
     hash_res_long = (unsigned long long)(hash_res[7]);
-    digest += hash_res_long;  
-    printf("digest = %lu\n ", digest);
+    digest += hash_res_long;
+
+    return digest;
+}
+
+__global__ void find_nonce(int chunk, int num_thread_blocks, int num_threads_per_block, unsigned long long block_search_space, unsigned long long n_decimal) {
+    // printf("Chunk is: %llu | n decimal is: %llu\n", chunk, n_decimal);
+    // printf("Thread idx: %d | Block dim: %d | Block idx: %d\n", threadIdx.x, blockDim.x, blockIdx.x);
+    // Each thread to search a chunk size at a time. This is so we can terminate early if a thread has already found the correct answer.
+    unsigned long long number_of_syncs = block_search_space / num_threads_per_block / chunk;
     
-    // Step 4: Compare with "n" to see if it can be accepted
-    // TODO(lowjiansheng): pass these values back to host
-    if (digest < n) {
-        found_res = true;
-        nonce_answer = nonce;
-        digest_answer = hash_res;
+    // Read off Unified (Global memory) once
+    uint8_t x[52];
+    for (int i = 0; i < 44; i ++) {
+        x[i] = unified_prepend_byte_array[i];
     }
+    
+    for (int i = 0; i < number_of_syncs; i ++) {
+        // Continue searching another chunk if nonce is not found  
+        if (!unified_found_res) {
+            for (int j = 0; j < chunk; j ++) {
+                // Step 1: Guess the value of "nonce"
+                unsigned long long block_starting = blockIdx.x * block_search_space;
+                unsigned long long thread_starting = threadIdx.x * (block_search_space / num_threads_per_block);
+                unsigned long long chunk_starting = chunk * i;
+                unsigned long long nonce = block_starting + thread_starting + chunk_starting + j;
+                get_x(x, nonce);
+                
+                // Step 2: Hash SHA256(X)
+                uint8_t hash_res[32];
+                sha256(hash_res, x, sizeof(x));
+
+                // Step 3: Get first 64-bits of the digest SHA256(X)
+                unsigned long long digest = hash_to_decimal(hash_res);
+
+                // Step 4: Compare with "n" to see if it can be accepted
+                if (digest < n_decimal) {
+                    printf("Found Nonce!\n");
+                    unified_found_res = true;
+                    unified_nonce_answer = nonce;
+                    for (int i = 0; i < 32; i ++) {
+                        unified_digest_answer[i] = hash_res[i];
+                    }
+                    // Thread early exit
+                    return;
+                }
+            }
+        } else {
+            return;
+        }
+        __syncthreads();
+    }
+    return;
 }
 
 int main(int argc, char **argv) {
-    
     // Initialize x with 416 bits of 0s
     std::bitset<416> x;
-    
+
     printf("~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~ \n");
-    printf("> Reading input file.... '%s'\n", argv[1]);
+    printf("> Reading input file: '%s'...\n", argv[1]);
+
     std::ifstream file(argv[1]);
     if (file.is_open()) {
         // Read odd lines (1, 3, 5...) as digest
         // Read even lines(2, 4, 6...) as n in decimal form
         std::string previous_digest;
         while (getline(file, previous_digest)) {
-            std::string n_decimal;
-            getline(file, n_decimal);
+            std::string n_decimal_string;
+            getline(file, n_decimal_string);
             
-            printf("> Pre-processing digest & decimal\n");
+            printf("> Pre-processing digest & decimal...\n");
             // Convert Unix timestamp of time now (seconds since UNIX epoch) to  bit array
             std::time_t time_now = std::time(0); // unsigned(?) 32-bit integer
             std::bitset<32> t_bit(time_now);
@@ -172,15 +204,41 @@ int main(int argc, char **argv) {
                 prepend_array[index] = byte_value_uint8;
 
             }
-            printf("> Pre-processing done\n");
-            cudaError_t rc = cudaMemcpyToSymbol(device_prepend_byte_array, &prepend_array, sizeof(device_prepend_byte_array));
-            if (rc != cudaSuccess) {
-                printf("Could not copy to device. Reason %s\n", cudaGetErrorString(rc));
+
+            // Convert string o usigned long long for "n"
+            char* endptr = NULL;
+            unsigned long long unified_n_decimal = strtoll(n_decimal_string.c_str(), &endptr, 10);
+            printf("~~~~~~~~~~ Pre-processing done ~~~~~~~~~~ \n");
+
+            // Copy over values to unified memory for CPU & GPU
+            printf("> Copying over values from CPU to unified memory (shared & global)...\n");
+
+            // Copy prepend_byte_array
+            for (int i = 0; i < 44; i ++) {
+                unified_prepend_byte_array[i] = prepend_array[i];
             }
-            printf("> Passing 352-bitset to threads to find nonce\n");
-            // TODO(lowjiansheng): Find some way to check if a thread has found the answer. Once found terminate and return.
-            find_nonce<<<1, 2>>>(); // (num_thread_blocks, num_threads/block)
-            cudaDeviceSynchronize(); // Waits for all CUDA threads to complete.
+            
+            // TODO: Alternative memory access method for Analysis
+            // cudaError_t rc = cudaMemcpyToSymbol(device_prepend_byte_array, &prepend_array, sizeof(device_prepend_byte_array));
+            // if (rc != cudaSuccess) {
+            //     printf("Could not copy to device. Reason %s\n", cudaGetErrorString(rc));
+            // }
+
+            // Set unified_found_res to be false initially. Will be set to true after nonce is found
+            unified_found_res = false;
+            printf("~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~ \n");
+
+            // Search for nonce
+            int num_thread_blocks = 16; // Each block will search (2^64 / 16) = 2^60 range
+            int num_threads_per_block = 128; // Each thread will search (2^60 / 128) = 2^53 range
+            int chunk = 256; // Each thread will sync after 256 guesses. Number of loops(synchronisations) for worst case scenario: (2^53 / 256)
+            unsigned long long block_search_space = pow(2, 64) / num_thread_blocks;
+            find_nonce<<<num_thread_blocks, num_threads_per_block>>>(chunk, num_thread_blocks, num_threads_per_block, block_search_space, unified_n_decimal);
+            // find_nonce<<<1, 1>>>(chunk, num_thread_blocks, num_threads_per_block, block_search_space, unified_n_decimal); // (num_thread_blocks, num_threads/block)
+            cudaDeviceSynchronize(); 
+
+            // Nonce is found. Copy results in device memory to host memory
+            printf("Found nonce: %llu\n", unified_nonce_answer);
         }
         file.close();
     }
