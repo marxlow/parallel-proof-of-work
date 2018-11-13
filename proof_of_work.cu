@@ -53,18 +53,51 @@ __global__ void find_nonce() {
     // [383, 128] previous_digest --> 256 bits given as input
     // [127, 64] id -->  NUSNET ID "E0003049" in char representation
     // [63, 0] nonce --> unsigned 64-bit number. Can be in the range of [2^64 - 1, 0]. This is what we have to find
-
-    // Each thread will be calculating 1 nonce.
-    // long nonce = blockIdx.x * blockDim.x + threadIdx.x;
-    // std::bitset<64> nonce_bit(nonce);
-    // std::bitset<416> x(prepend_bit_device + nonce_bit);
-
+    long long nonce = blockDim.x * blockIdx.x + threadIdx.x;
+    printf("Nonce value = %d\n ", nonce);
+    uint8_t nonce_bytes[8];
+    // First 8 bits of the nonce.
+    int mask = 0xFF;
+    // Reversed due to big endianness
+    nonce_bytes[7] = (int)(nonce & mask);
+    nonce_bytes[6] = (int)((nonce>>8) & mask);
+    nonce_bytes[5] = (int)((nonce>>16) & mask);
+    nonce_bytes[4] = (int)((nonce>>24) & mask);
+    nonce_bytes[3] = (int)((nonce>>32) & mask);
+    nonce_bytes[2] = (int)((nonce>>40) & mask);
+    nonce_bytes[1] = (int)((nonce>>48) & mask);
+    nonce_bytes[0] = (int)((nonce>>56) & mask);
+    uint8_t x[52];
+    for (int i = 0 ; i < 44; i++) {
+        x[i] = device_prepend_byte_array[i];
+    }
+    for (int i = 44; i < 52; i++) {
+        x[i] = nonce_bytes[i - 44];
+    }
     // Step 2: Hash SHA256(X)
-    //__device__ void sha256(uint8_t hash[32], const uint8_t * input, size_t len);
-    // uint8_t hash_res[32]; 
-    // hash.sha256(hash_res, x, sizeof(x));
+    //__device__ void hash.sha256(uint8_t hash[32], const uint8_t * input, size_t len);
+    uint8_t hash_res[32]; 
+    sha256(hash_res, x, sizeof(x));
 
     // Step 3: Get first 64-bits of the digest SHA256(X)
+    unsigned long long digest = 0; 
+    unsigned long long hash_res_long = (unsigned long long)(hash_res[0]);
+    digest += hash_res_long<<56;
+    hash_res_long = (unsigned long long)(hash_res[1]);
+    digest += hash_res_long<<48;
+    hash_res_long = (unsigned long long)(hash_res[2]);
+    digest += hash_res_long<<40;
+    hash_res_long = (unsigned long long)(hash_res[3]);
+    digest += hash_res_long<<32;
+    hash_res_long = (unsigned long long)(hash_res[4]);
+    digest += hash_res_long<<24;  
+    hash_res_long = (unsigned long long)(hash_res[5]);
+    digest += hash_res_long<<16;  
+    hash_res_long = (unsigned long long)(hash_res[6]);
+    digest += hash_res_long<<8;  
+    hash_res_long = (unsigned long long)(hash_res[7]);
+    digest += hash_res_long;  
+    printf("digest = %lu\n ", digest);
     
     // Step 4: Compare with "n" to see if it can be accepted
 }
@@ -133,7 +166,7 @@ int main(int argc, char **argv) {
                 printf("Could not copy to device. Reason %s\n", cudaGetErrorString(rc));
             }
             printf("> Passing 352-bitset to threads to find nonce\n");
-            find_nonce<<<1, 1>>>(); // (num_thread_blocks, num_threads/block)
+            find_nonce<<<1, 2>>>(); // (num_thread_blocks, num_threads/block)
             cudaDeviceSynchronize(); // Waits for all CUDA threads to complete.
         }
         file.close();
