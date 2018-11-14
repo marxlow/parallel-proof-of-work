@@ -128,7 +128,8 @@ __global__ void find_nonce(int chunk, int num_thread_blocks, int num_threads_per
 
                 // Step 4: Compare with "n" to see if it can be accepted
                 if (digest < n_decimal) {
-                    printf("Found Nonce!\n");
+                    // printf("Found Nonce! Producing last 64 bit value of: %ull | Thread info: \n", digest);
+                    // printf("Thread idx: %d | Block idx: %d | Chunk starting: %ull | Chunk offset: %d | Chunk: %ull\n\n", threadIdx.x, blockIdx.x, chunk * i, j, nonce);
                     unified_found_res = true;
                     unified_nonce_answer = nonce;
                     for (int i = 0; i < 32; i ++) {
@@ -150,15 +151,15 @@ int main(int argc, char **argv) {
     // Initialize x with 416 bits of 0s
     std::bitset<416> x;
 
-    printf("~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~ \n");
     printf("> Reading input file: '%s'...\n", argv[1]);
-
+    
     std::ifstream file(argv[1]);
     if (file.is_open()) {
         // Read odd lines (1, 3, 5...) as digest
         // Read even lines(2, 4, 6...) as n in decimal form
         std::string previous_digest;
         while (getline(file, previous_digest)) {
+            printf("\n\n~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~ \n");
             std::string n_decimal_string;
             getline(file, n_decimal_string);
             
@@ -223,7 +224,6 @@ int main(int argc, char **argv) {
             // if (rc != cudaSuccess) {
             //     printf("Could not copy to device. Reason %s\n", cudaGetErrorString(rc));
             // }
-
             // Set unified_found_res to be false initially. Will be set to true after nonce is found
             unified_found_res = false;
             printf("~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~ \n");
@@ -233,12 +233,16 @@ int main(int argc, char **argv) {
             int num_threads_per_block = 128; // Each thread will search (2^60 / 128) = 2^53 range
             int chunk = 256; // Each thread will sync after 256 guesses. Number of loops(synchronisations) for worst case scenario: (2^53 / 256)
             unsigned long long block_search_space = pow(2, 64) / num_thread_blocks;
-            find_nonce<<<num_thread_blocks, num_threads_per_block>>>(chunk, num_thread_blocks, num_threads_per_block, block_search_space, unified_n_decimal);
-            // find_nonce<<<1, 1>>>(chunk, num_thread_blocks, num_threads_per_block, block_search_space, unified_n_decimal); // (num_thread_blocks, num_threads/block)
-            cudaDeviceSynchronize(); 
 
+            clock_t parallel_time = clock();
+            printf("> Executing parallel code to find nonce\n");
+            find_nonce<<<num_thread_blocks, num_threads_per_block>>>(chunk, num_thread_blocks, num_threads_per_block, block_search_space, unified_n_decimal);
+            cudaDeviceSynchronize(); 
+            parallel_time = clock() - parallel_time;
+            
+            printf("~~~~~~~~~~ Found nonce: %llu ~~~~~~~~~~\n", unified_nonce_answer);
+            cout << "> Parallel execution took: " << (float)parallel_time/CLOCKS_PER_SEC << " seconds" << endl;
             // Nonce is found. Copy results in device memory to host memory
-            printf("Found nonce: %llu\n", unified_nonce_answer);
         }
         file.close();
     }
