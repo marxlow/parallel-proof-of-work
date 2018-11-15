@@ -229,13 +229,13 @@ int main(int argc, char **argv) {
             printf("~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~ \n");
 
             // Search for nonce
-            int num_thread_blocks = 16; // Each block will search (2^64 / 16) = 2^60 range
-            int num_threads_per_block = 128; // Each thread will search (2^60 / 128) = 2^53 range
+            int num_thread_blocks = 64; // Each block will search (2^64 / 16) = 2^60 range
+            int num_threads_per_block = 256; // Each thread will search (2^60 / 128) = 2^53 range
             int chunk = 256; // Each thread will sync after 256 guesses. Number of loops(synchronisations) for worst case scenario: (2^53 / 256)
             unsigned long long block_search_space = pow(2, 64) / num_thread_blocks;
 
             clock_t parallel_time = clock();
-            printf("> Executing parallel code to find nonce\n");
+            printf("> Executing parallel code to find nonce below n_decimal: %llu ...\n", unified_n_decimal);
             find_nonce<<<num_thread_blocks, num_threads_per_block>>>(chunk, num_thread_blocks, num_threads_per_block, block_search_space, unified_n_decimal);
             cudaDeviceSynchronize(); 
             parallel_time = clock() - parallel_time;

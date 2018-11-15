@@ -1,0 +1,284 @@
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 281474976710656 ...
+~~~~~~~~~~ Found nonce: 14112029432365450230 ~~~~~~~~~~
+> Parallel execution took: 0.02424 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 140737488355328 ...
+~~~~~~~~~~ Found nonce: 3161526938414089687 ~~~~~~~~~~
+> Parallel execution took: 0.032344 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 70368744177664 ...
+~~~~~~~~~~ Found nonce: 2974627553878216460 ~~~~~~~~~~
+> Parallel execution took: 0.07417 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 35184372088832 ...
+~~~~~~~~~~ Found nonce: 12833007138192234434 ~~~~~~~~~~
+> Parallel execution took: 0.114156 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 17592186044416 ...
+~~~~~~~~~~ Found nonce: 12969241026920204054 ~~~~~~~~~~
+> Parallel execution took: 0.330454 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 8796093022208 ...
+~~~~~~~~~~ Found nonce: 12911820131671248016 ~~~~~~~~~~
+> Parallel execution took: 0.641686 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 4398046511104 ...
+~~~~~~~~~~ Found nonce: 14420526006840398981 ~~~~~~~~~~
+> Parallel execution took: 1.20435 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 2199023255552 ...
+~~~~~~~~~~ Found nonce: 17593311944322948140 ~~~~~~~~~~
+> Parallel execution took: 1.55786 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 1099511627776 ...
+~~~~~~~~~~ Found nonce: 13835058055282473513 ~~~~~~~~~~
+> Parallel execution took: 5.47371 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 549755813888 ...
+~~~~~~~~~~ Found nonce: 4903294094299696833 ~~~~~~~~~~
+> Parallel execution took: 2.01788 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 274877906944 ...
+~~~~~~~~~~ Found nonce: 9119789245425259733 ~~~~~~~~~~
+> Parallel execution took: 0.236944 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 137438953472 ...
+~~~~~~~~~~ Found nonce: 17568542146374808830 ~~~~~~~~~~
+> Parallel execution took: 44.6831 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 68719476736 ...
+~~~~~~~~~~ Found nonce: 13616633473359475993 ~~~~~~~~~~
+> Parallel execution took: 71.7058 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 34359738368 ...
+~~~~~~~~~~ Found nonce: 3944027373672424787 ~~~~~~~~~~
+> Parallel execution took: 63.7047 seconds
+~~~~~~~~~~ Done ~~~~~~~~~~
+marxlow@xgpd3:~/parallel_proof_of_work$ ^C
+marxlow@xgpd3:~/parallel_proof_of_work$
+marxlow@xgpd3:~/parallel_proof_of_work$ run
+> Reading input file: 'test.in'...
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 281474976710656 ...
+~~~~~~~~~~ Found nonce: 9909045080121935539 ~~~~~~~~~~
+> Parallel execution took: 0.033233 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 140737488355328 ...
+~~~~~~~~~~ Found nonce: 592223350999221953 ~~~~~~~~~~
+> Parallel execution took: 0.049972 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 70368744177664 ...
+~~~~~~~~~~ Found nonce: 8067072832527406146 ~~~~~~~~~~
+> Parallel execution took: 0.10091 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 35184372088832 ...
+~~~~~~~~~~ Found nonce: 4150067056621919157 ~~~~~~~~~~
+> Parallel execution took: 0.128912 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 17592186044416 ...
+~~~~~~~~~~ Found nonce: 11387351657806327390 ~~~~~~~~~~
+> Parallel execution took: 0.41628 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 8796093022208 ...
+~~~~~~~~~~ Found nonce: 4159074255876689601 ~~~~~~~~~~
+> Parallel execution took: 0.746831 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 4398046511104 ...
+~~~~~~~~~~ Found nonce: 1313925191285393195 ~~~~~~~~~~
+> Parallel execution took: 0.888592 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 2199023255552 ...
+~~~~~~~~~~ Found nonce: 9746915493536813258 ~~~~~~~~~~
+> Parallel execution took: 3.68986 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 1099511627776 ...
+~~~~~~~~~~ Found nonce: 11286020666190633923 ~~~~~~~~~~
+> Parallel execution took: 2.53029 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 549755813888 ...
+~~~~~~~~~~ Found nonce: 17821869625412644476 ~~~~~~~~~~
+> Parallel execution took: 11.063 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 274877906944 ...
+~~~~~~~~~~ Found nonce: 4832362400169582278 ~~~~~~~~~~
+> Parallel execution took: 15.5915 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 137438953472 ...
+~~~~~~~~~~ Found nonce: 5492139745581206724 ~~~~~~~~~~
+> Parallel execution took: 50.2922 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 68719476736 ...
+~~~~~~~~~~ Found nonce: 14579277893710093046 ~~~~~~~~~~
+> Parallel execution took: 86.8164 seconds
+
+
+~~~~~~~~~~ Calculating proof of work ~~~~~~~~~~
+> Pre-processing digest & decimal...
+~~~~~~~~~~ Pre-processing done ~~~~~~~~~~
+> Copying over values from CPU to unified memory (shared & global)...
+~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~
+> Executing parallel code to find nonce below n_decimal: 34359738368 ...
+~~~~~~~~~~ Found nonce: 8849573267795436946 ~~~~~~~~~~
+> Parallel execution took: 187.574 seconds
+~~~~~~~~~~ Done ~~~~~~~~~~
