@@ -240,12 +240,22 @@ int main(int argc, char **argv) {
             cudaDeviceSynchronize(); 
             parallel_time = clock() - parallel_time;
             
-            printf("~~~~~~~~~~ Found nonce: %llu ~~~~~~~~~~\n", unified_nonce_answer);
+            printf("~~~~~~~~~~ Found nonce ~~~~~~~~~~\n");
             cout << "> Parallel execution took: " << (float)parallel_time/CLOCKS_PER_SEC << " seconds" << endl;
+            printf("Output: \n");
             // Nonce is found. Copy results in device memory to host memory
+            printf("%s\n", nus_net_id.c_str());
+            printf("%ld\n", time_now);
+            printf("%llu\n", unified_nonce_answer);
+            char buffer [65];
+            buffer[64] = 0;
+            for(int j = 0; j < 32; j++) {
+                sprintf(&buffer[2*j], "%02X", unified_digest_answer[j]);
+            }
+            printf("%s\n", buffer); // Credit from https://stackoverflow.com/questions/19371845/using-cout-to-print-the-entire-contents-of-a-character-array
         }
         file.close();
     }
-    printf("~~~~~~~~~~ Done ~~~~~~~~~~ \n");
+    printf("\n~~~~~~~~~~ Done ~~~~~~~~~~\n");
     return 0;
 }
