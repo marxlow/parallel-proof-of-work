@@ -222,14 +222,14 @@ int main(int argc, char **argv) {
             printf("Got here...\n");
 
             dim3 threadsPerBlock(256);   // power 8
-            dim3 blocksPerGrid((512));  // power 9
+            dim3 blocksPerGrid((2048));  // power 10
 
             printf("> Executing parallel code to find nonce\n");
             clock_t parallel_time = clock();
             // Will run a total of 2^10 iterations
             // At each iteration will check if any threads have found the nonce. 
             // Once found will terminate.
-            unsigned long long num_iteration = pow(2,47);   // power 20
+            unsigned long long num_iteration = pow(2,45);   // power 20
             unsigned long long iteration_block = pow(2,64) / num_iteration;
             for (unsigned long long i = 0 ; i < num_iteration; i++) {
                 //printf("i = %llu\n", i);
