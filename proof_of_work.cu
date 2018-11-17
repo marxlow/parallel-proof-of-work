@@ -217,6 +217,8 @@ int main(int argc, char **argv) {
             printf("~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~ \n");
 
             // Search for nonce
+            int num_thread_blocks = 64; // Each block will search (2^64 / 16) = 2^60 range
+            int num_threads_per_block = 256; // Each thread will search (2^60 / 128) = 2^53 range
             int chunk = 256; // Each thread will sync after 256 guesses. Number of loops(synchronisations) for worst case scenario: (2^53 / 256)
             //unsigned long long block_search_space = pow(2, 64) / num_blocks_per_grid;
             printf("Got here...\n");
@@ -224,31 +226,28 @@ int main(int argc, char **argv) {
             dim3 threadsPerBlock(256);   // power 8
             dim3 blocksPerGrid((2048));  // power 10
 
-            printf("> Executing parallel code to find nonce\n");
             clock_t parallel_time = clock();
-            // Will run a total of 2^10 iterations
-            // At each iteration will check if any threads have found the nonce. 
-            // Once found will terminate.
-            unsigned long long num_iteration = pow(2,45);   // power 20
-            unsigned long long iteration_block = pow(2,64) / num_iteration;
-            for (unsigned long long i = 0 ; i < num_iteration; i++) {
-                //printf("i = %llu\n", i);
-                find_nonce<<<blocksPerGrid, threadsPerBlock>>>(chunk,i , iteration_block, unified_n_decimal);
-                if (unified_found_res) {
-                    break;
-                }
-            }
+            printf("> Executing parallel code to find nonce below n_decimal: %llu ...\n", unified_n_decimal);
+            find_nonce<<<num_thread_blocks, num_threads_per_block>>>(chunk, num_thread_blocks, num_threads_per_block, block_search_space, unified_n_decimal);
             cudaDeviceSynchronize(); 
             parallel_time = clock() - parallel_time;
-            if (unified_found_res) {
-                printf("~~~~~~~~~~ Found nonce: %llu ~~~~~~~~~~\n", unified_nonce_answer);
-            } else {
-                printf("~~~~~~~~~~ No nonce found. ~~~~~~~~~~\n");
-            }
+            
+            printf("~~~~~~~~~~ Found nonce ~~~~~~~~~~\n");
             cout << "> Parallel execution took: " << (float)parallel_time/CLOCKS_PER_SEC << " seconds" << endl;
+            printf("Output: \n");
+            // Nonce is found. Copy results in device memory to host memory
+            printf("%s\n", nus_net_id.c_str());
+            printf("%ld\n", time_now);
+            printf("%llu\n", unified_nonce_answer);
+            char buffer [65];
+            buffer[64] = 0;
+            for(int j = 0; j < 32; j++) {
+                sprintf(&buffer[2*j], "%02X", unified_digest_answer[j]);
+            }
+            printf("%s\n", buffer); // Credit from https://stackoverflow.com/questions/19371845/using-cout-to-print-the-entire-contents-of-a-character-array
         }
         file.close();
     }
-    printf("~~~~~~~~~~ Done ~~~~~~~~~~ \n");
+    printf("\n~~~~~~~~~~ Done ~~~~~~~~~~\n");
     return 0;
 }
