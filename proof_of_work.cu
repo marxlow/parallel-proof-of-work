@@ -96,42 +96,54 @@ __device__ unsigned long long hash_to_decimal(uint8_t hash_res[32]) {
     return digest;
 }
 
-__global__ void find_nonce(int chunk, int iteration, unsigned long long iteration_block, unsigned long long n_decimal) {
-    if (unified_found_res == true) {
-        //printf("Returned?\n");
-        return;
-    }
-    // printf("I'm here~\n");
-    // Step 1: Get the nonce number to be checked by thread and create X.
+__global__ void find_nonce(int chunk, int num_thread_blocks, int num_threads_per_block, unsigned long long block_search_space, unsigned long long n_decimal) {
+    // printf("Chunk is: %llu | n decimal is: %llu\n", chunk, n_decimal);
+    // printf("Thread idx: %d | Block dim: %d | Block idx: %d\n", threadIdx.x, blockDim.x, blockIdx.x);
+    // Each thread to search a chunk size at a time. This is so we can terminate early if a thread has already found the correct answer.
+    unsigned long long number_of_syncs = block_search_space / num_threads_per_block / chunk;
+    
     // Read off Unified (Global memory) once
     uint8_t x[52];
     for (int i = 0; i < 44; i ++) {
         x[i] = unified_prepend_byte_array[i];
     }
-    unsigned long long num_threads_per_block = blockDim.x * blockDim.y * blockDim.z;
-    unsigned long long block_id = blockIdx.x + blockIdx.y * gridDim.x + blockIdx.z * gridDim.y;
-    unsigned long long thread_id = threadIdx.x + threadIdx.y * blockDim.x + threadIdx.z * blockDim.y;
-    unsigned long long iteration_off_set = iteration * iteration_block;
-    unsigned long long nonce = iteration_off_set + block_id * num_threads_per_block + thread_id; 
-    // printf("Value of nonce: %ulf\n", nonce);
-    get_x(x, nonce);
+    
+    for (int i = 0; i < number_of_syncs; i ++) {
+        // Continue searching another chunk if nonce is not found  
+        if (!unified_found_res) {
+            for (int j = 0; j < chunk; j ++) {
+                // Step 1: Guess the value of "nonce"
+                unsigned long long block_starting = blockIdx.x * block_search_space;
+                unsigned long long thread_starting = threadIdx.x * (block_search_space / num_threads_per_block);
+                unsigned long long chunk_starting = chunk * i;
+                unsigned long long nonce = block_starting + thread_starting + chunk_starting + j;
+                get_x(x, nonce);
+                
+                // Step 2: Hash SHA256(X)
+                uint8_t hash_res[32];
+                sha256(hash_res, x, sizeof(x));
 
-    // Step 2: Hash SHA256(X)
-    uint8_t hash_res[32];
-    sha256(hash_res, x, sizeof(x));
+                // Step 3: Get first 64-bits of the digest SHA256(X)
+                unsigned long long digest = hash_to_decimal(hash_res);
 
-    // Step 3: Get first 64-bits of the digest SHA256(X)
-    unsigned long long digest = hash_to_decimal(hash_res);
-
-    // Step 4: Compare with "n" to see if it can be accepted
-    if (digest < n_decimal) {
-        unified_found_res = true;
-        unified_nonce_answer = nonce;
-        printf("FOUND ANS = %llu\n", nonce);
-        for (int i = 0; i < 32; i ++) {
-            unified_digest_answer[i] = hash_res[i];
+                // Step 4: Compare with "n" to see if it can be accepted
+                if (digest < n_decimal) {
+                    // printf("Found Nonce! Producing last 64 bit value of: %ull | Thread info: \n", digest);
+                    // printf("Thread idx: %d | Block idx: %d | Chunk starting: %ull | Chunk offset: %d | Chunk: %ull\n\n", threadIdx.x, blockIdx.x, chunk * i, j, nonce);
+                    unified_found_res = true;
+                    unified_nonce_answer = nonce;
+                    for (int i = 0; i < 32; i ++) {
+                        unified_digest_answer[i] = hash_res[i];
+                    }
+                    // Thread early exit
+                    return;
+                }
+            }
+        } else {
+            return;
         }
-    } 
+        __syncthreads();
+    }
     return;
 }
 
@@ -220,11 +232,7 @@ int main(int argc, char **argv) {
             int num_thread_blocks = 64; // Each block will search (2^64 / 16) = 2^60 range
             int num_threads_per_block = 256; // Each thread will search (2^60 / 128) = 2^53 range
             int chunk = 256; // Each thread will sync after 256 guesses. Number of loops(synchronisations) for worst case scenario: (2^53 / 256)
-            //unsigned long long block_search_space = pow(2, 64) / num_blocks_per_grid;
-            printf("Got here...\n");
-
-            dim3 threadsPerBlock(256);   // power 8
-            dim3 blocksPerGrid((2048));  // power 10
+            unsigned long long block_search_space = pow(2, 64) / num_thread_blocks;
 
             clock_t parallel_time = clock();
             printf("> Executing parallel code to find nonce below n_decimal: %llu ...\n", unified_n_decimal);
