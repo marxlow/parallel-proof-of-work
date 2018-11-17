@@ -143,9 +143,6 @@ __global__ void find_nonce(unsigned long long thread_search_space, unsigned long
 
             // Step 4: Compare with "n" to see if it can be accepted
             if (digest < n_decimal && !found_res) {
-                printf("I FOUND NONCE");
-                printf("Block num = %d ", blockIdx.x);
-                printf("Thread id = %d\n", threadIdx.x);
                 // printf("Found Nonce! Producing last 64 bit value of: %ull | Thread info: \n", digest);
                 // printf("Thread idx: %d | Block idx: %d | Chunk starting: %ull | Chunk offset: %d | Chunk: %ull\n\n", threadIdx.x, blockIdx.x, chunk * i, j, nonce);
                 found_res = true;
@@ -246,7 +243,7 @@ int main(int argc, char **argv) {
 
             // PARALLEL SEARCH FOR NONCE
             int num_blocks_per_grid = 256; // Each block will search (2^64 / 16) = 2^60 range
-            int num_threads_per_block = 64; // Each thread will search (2^60 / 128) = 2^53 range
+            int num_threads_per_block = 128; // Each thread will search (2^60 / 128) = 2^53 range
             // TODO(lowjiansheng): No need for chunks. Remove it. 
             // int chunk = 256; // Each thread will sync after 256 guesses. Number of loops(synchronisations) for worst case scenario: (2^53 / 256)
             unsigned long long thread_search_space = pow(2, 64) / (num_blocks_per_grid * num_threads_per_block);
