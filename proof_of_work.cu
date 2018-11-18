@@ -110,7 +110,7 @@ __device__ unsigned long long hash_to_decimal(uint8_t hash_res[32]) {
 
 
 __global__ void find_nonce(unsigned long long thread_search_space, unsigned long long n_decimal, bool runBlock) {
-    // printf("Thread idx: %d | Block dim: %d | Block idx: %d\n", threadIdx.x, blockDim.x, blockIdx.x);
+    // printf("Thread idx: %d | Block dim: %d | Block idx: %d | search space: %llu\n", threadIdx.x, blockDim.x, blockIdx.x, thread_search_space);
     // Return if res is already found to skip work
     if (found_res) {
         return;
@@ -136,7 +136,7 @@ __global__ void find_nonce(unsigned long long thread_search_space, unsigned long
             if (runBlock) {
                 next_index = thread_start_index + i;
             } else {
-                next_index = thread_start_index + (i * blockDim.x * blockIdx.x);
+                next_index = thread_start_index + (i * blockDim.x * (blockIdx.x + 1));
             }
             get_x(x, next_index);
             
@@ -247,8 +247,8 @@ int main(int argc, char **argv) {
             printf("~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~ \n");
 
             // Initialize GPU parameters
-            int num_blocks_per_grid = 256; // Each block will search (2^64 / 16) = 2^60 range
-            int num_threads_per_block = 128; // Each thread will search (2^60 / 128) = 2^53 range
+            int num_blocks_per_grid = 1; // Each block will search (2^64 / 16) = 2^60 range
+            int num_threads_per_block = 1; // Each thread will search (2^60 / 128) = 2^53 range
             bool runBlock = false;
             unsigned long long thread_search_space = pow(2, 64) / (num_blocks_per_grid * num_threads_per_block);
             
