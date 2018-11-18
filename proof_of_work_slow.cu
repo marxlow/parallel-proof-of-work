@@ -253,7 +253,9 @@ int main(int argc, char **argv) {
             clock_t parallel_time = clock();
             
             find_nonce<<<num_blocks_per_grid, num_threads_per_block>>>(thread_search_space, n_decimal);
+            
             // CPU busy wait.
+            /*
             while (!unified_found_res) {
                 check_cuda_errors();
                 // No threads found the nonce.
@@ -261,13 +263,15 @@ int main(int argc, char **argv) {
                     break;
                 }
                 // Timeout
+                if (((clock() - parallel_time)/CLOCKS_PER_SEC) % 30 == 0) {
+                    printf("Current time %f\n", )
+                }
                 if (((float)(clock() - parallel_time)/CLOCKS_PER_SEC) > 900) {
                     printf("TIMEOUT.\n");
                     break; 
                 } 
-            };
-
-            //cudaDeviceSynchronize(); 
+            };*/
+            cudaDeviceSynchronize(); 
             check_cuda_errors();
             parallel_time = clock() - parallel_time;
             
