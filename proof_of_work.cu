@@ -12,9 +12,7 @@ using namespace std;
 
 
 __device__ __managed__ uint8_t unified_prepend_byte_array[44];
-// __device__ __managed__ unsigned long long unified_n_decimal;
-// These 2 variables will only be set once an answer is found by a thread.
-// Copy these values back into host.
+// These  variables will only be set once an answer is found by a thread.
 __device__ __managed__ unsigned long long unified_nonce_answer;
 __device__ __managed__ uint8_t unified_digest_answer[32];
 __device__ __managed__ bool unified_found_res;
@@ -107,12 +105,11 @@ __device__ unsigned long long hash_to_decimal(uint8_t hash_res[32]) {
     hash_res_long = (unsigned long long)(hash_res[7]);
     digest += hash_res_long;
 
-    bool runBlock = true;
     return digest;
 }
 
 
-__global__ void find_nonce(unsigned long long thread_search_space, unsigned long long n_decimal, bool runBlock), runBlock {
+__global__ void find_nonce(unsigned long long thread_search_space, unsigned long long n_decimal, bool runBlock) {
     // printf("Thread idx: %d | Block dim: %d | Block idx: %d\n", threadIdx.x, blockDim.x, blockIdx.x);
     // Return if res is already found to skip work
     if (found_res) {
@@ -128,7 +125,7 @@ __global__ void find_nonce(unsigned long long thread_search_space, unsigned long
     if (runBlock) {
         thread_start_index = (blockDim.x * blockIdx.x + threadIdx.x) * thread_search_space;
     } else {
-        thread_start_index = threadIx.x + (blockDim.x * blockIdx.x);
+        thread_start_index = threadIdx.x + (blockDim.x * blockIdx.x);
     }
 
     // Iterate through search space of each thread
@@ -141,7 +138,7 @@ __global__ void find_nonce(unsigned long long thread_search_space, unsigned long
             } else {
                 next_index = thread_start_index + (i * blockDim.x * blockIdx.x);
             }
-            get_x(x, thread_start_index + i);
+            get_x(x, next_index);
             
             // Step 2: Hash SHA256(X)
             uint8_t hash_res[32];
@@ -154,7 +151,7 @@ __global__ void find_nonce(unsigned long long thread_search_space, unsigned long
             if (digest < n_decimal && !found_res) {
                 found_res = true;
                 unified_found_res= true;
-                unified_nonce_answer = thread_start_index + i;
+                unified_nonce_answer = next_index;
                 for (int i = 0; i < 32; i ++) {
                     unified_digest_answer[i] = hash_res[i];
                 }
@@ -252,7 +249,7 @@ int main(int argc, char **argv) {
             // Initialize GPU parameters
             int num_blocks_per_grid = 256; // Each block will search (2^64 / 16) = 2^60 range
             int num_threads_per_block = 128; // Each thread will search (2^60 / 128) = 2^53 range
-            bool runBlock = true;
+            bool runBlock = false;
             unsigned long long thread_search_space = pow(2, 64) / (num_blocks_per_grid * num_threads_per_block);
             
             // Run GPU code
