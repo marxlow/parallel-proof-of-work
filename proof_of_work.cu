@@ -247,9 +247,9 @@ int main(int argc, char **argv) {
             printf("~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~ \n");
 
             // Initialize GPU parameters
-            int num_blocks_per_grid = 1; // Each block will search (2^64 / 16) = 2^60 range
-            int num_threads_per_block = 1; // Each thread will search (2^60 / 128) = 2^53 range
-            bool runBlock = false;
+            int num_blocks_per_grid = 128; // Each block will search (2^64 / 16) = 2^60 range
+            int num_threads_per_block = 256; // Each thread will search (2^60 / 128) = 2^53 range
+            bool runBlock = true;
             unsigned long long thread_search_space = pow(2, 64) / (num_blocks_per_grid * num_threads_per_block);
             
             // Run GPU code
@@ -273,6 +273,16 @@ int main(int argc, char **argv) {
                     sprintf(&buffer[2*j], "%02X", unified_digest_answer[j]);
                 }
                 printf("%s\n", buffer); // Credit from https://stackoverflow.com/questions/19371845/using-cout-to-print-the-entire-contents-of-a-character-array
+                // Output to file
+                ofstream myfile ("test.out");
+                if (myfile.is_open())
+                {
+                    myfile << nus_net_id.c_str() << "\n";
+                    myfile << time_now << "\n";
+                    myfile << unified_nonce_answer << "\n";
+                    myfile << buffer << "\n";
+                    myfile.close();
+                }
             } else {
                 printf("~~~~~~~~~~ No nonce found ~~~~~~~~~~\n");
             }
@@ -282,18 +292,3 @@ int main(int argc, char **argv) {
     printf("\n~~~~~~~~~~ Done ~~~~~~~~~~\n");
     return 0;
 }
-
-// CPU busy wait.
-/*
-while (!unified_found_res) {
-    check_cuda_errors();
-    // No threads found the nonce.
-    if (num_thread_failure == num_blocks_per_grid * num_threads_per_block){
-        break;
-    }
-    // Timeout
-    if (((float)(clock() - parallel_time)/CLOCKS_PER_SEC) > 900) {
-        printf("TIMEOUT.\n");
-        break; 
-    } 
-};*/
