@@ -12,13 +12,13 @@ using namespace std;
 
 
 __device__ __managed__ uint8_t unified_prepend_byte_array[44];
-// __device__ __managed__ unsigned long long unified_n_decimal;
-// These 2 variables will only be set once an answer is found by a thread.
-// Copy these values back into host.
+// These  variables will only be set once an answer is found by a thread.
 __device__ __managed__ unsigned long long unified_nonce_answer;
 __device__ __managed__ uint8_t unified_digest_answer[32];
 __device__ __managed__ bool unified_found_res;
 
+__device__ __managed__ int num_thread_failure;
+__device__ bool found_res = false;
 
 // Helper functions
 const char* hex_char_to_bin(char c) {
@@ -74,6 +74,18 @@ __device__ void get_x(uint8_t x[52], unsigned long long nonce) {
     }
 }
 
+// From Lab
+void check_cuda_errors()
+{
+    cudaError_t rc;
+    rc = cudaGetLastError();
+    if (rc != cudaSuccess)
+    {
+        printf("Last CUDA error %s\n", cudaGetErrorString(rc));
+    }
+
+}
+
 __device__ unsigned long long hash_to_decimal(uint8_t hash_res[32]) {
     unsigned long long digest = 0; 
     unsigned long long hash_res_long = (unsigned long long)(hash_res[0]);
@@ -96,54 +108,64 @@ __device__ unsigned long long hash_to_decimal(uint8_t hash_res[32]) {
     return digest;
 }
 
-__global__ void find_nonce(int chunk, int num_thread_blocks, int num_threads_per_block, unsigned long long block_search_space, unsigned long long n_decimal) {
-    // printf("Chunk is: %llu | n decimal is: %llu\n", chunk, n_decimal);
-    // printf("Thread idx: %d | Block dim: %d | Block idx: %d\n", threadIdx.x, blockDim.x, blockIdx.x);
-    // Each thread to search a chunk size at a time. This is so we can terminate early if a thread has already found the correct answer.
-    unsigned long long number_of_syncs = block_search_space / num_threads_per_block / chunk;
-    
-    // Read off Unified (Global memory) once
+
+__global__ void find_nonce(unsigned long long thread_search_space, unsigned long long n_decimal, bool runBlock) {
+    // printf("Thread idx: %d | Block dim: %d | Block idx: %d | search space: %llu\n", threadIdx.x, blockDim.x, blockIdx.x, thread_search_space);
+    // Return if res is already found to skip work
+    if (found_res) {
+        return;
+    }
+
+    // Initialization
     uint8_t x[52];
     for (int i = 0; i < 44; i ++) {
         x[i] = unified_prepend_byte_array[i];
     }
-    
-    for (int i = 0; i < number_of_syncs; i ++) {
-        // Continue searching another chunk if nonce is not found  
-        if (!unified_found_res) {
-            for (int j = 0; j < chunk; j ++) {
-                // Step 1: Guess the value of "nonce"
-                unsigned long long block_starting = blockIdx.x * block_search_space;
-                unsigned long long thread_starting = threadIdx.x * (block_search_space / num_threads_per_block);
-                unsigned long long chunk_starting = chunk * i;
-                unsigned long long nonce = block_starting + thread_starting + chunk_starting + j;
-                get_x(x, nonce);
-                
-                // Step 2: Hash SHA256(X)
-                uint8_t hash_res[32];
-                sha256(hash_res, x, sizeof(x));
+    unsigned long long thread_start_index;
+    if (runBlock) {
+        thread_start_index = (blockDim.x * blockIdx.x + threadIdx.x) * thread_search_space;
+    } else {
+        thread_start_index = threadIdx.x + (blockDim.x * blockIdx.x);
+    }
 
-                // Step 3: Get first 64-bits of the digest SHA256(X)
-                unsigned long long digest = hash_to_decimal(hash_res);
+    // Iterate through search space of each thread
+    for (unsigned long long i = 0; i < thread_search_space; i++) {
+        if (!found_res) {
+            // Step 1: Form x with nonce which is thread_start_index + i. 
+            unsigned long long next_index;
+            if (runBlock) {
+                next_index = thread_start_index + i;
+            } else {
+                next_index = thread_start_index + (i * blockDim.x * (blockIdx.x + 1));
+            }
+            get_x(x, next_index);
+            
+            // Step 2: Hash SHA256(X)
+            uint8_t hash_res[32];
+            sha256(hash_res, x, sizeof(x));
 
-                // Step 4: Compare with "n" to see if it can be accepted
-                if (digest < n_decimal) {
-                    // printf("Found Nonce! Producing last 64 bit value of: %ull | Thread info: \n", digest);
-                    // printf("Thread idx: %d | Block idx: %d | Chunk starting: %ull | Chunk offset: %d | Chunk: %ull\n\n", threadIdx.x, blockIdx.x, chunk * i, j, nonce);
-                    unified_found_res = true;
-                    unified_nonce_answer = nonce;
-                    for (int i = 0; i < 32; i ++) {
-                        unified_digest_answer[i] = hash_res[i];
-                    }
-                    // Thread early exit
-                    return;
+            // Step 3: Get first 64-bits of the digest SHA256(X)
+            unsigned long long digest = hash_to_decimal(hash_res);
+
+            // Step 4: Compare with "n" to see if it can be accepted
+            if (digest < n_decimal && !found_res) {
+                found_res = true;
+                unified_found_res= true;
+                unified_nonce_answer = next_index;
+                for (int i = 0; i < 32; i ++) {
+                    unified_digest_answer[i] = hash_res[i];
                 }
+                // Thread early exit
+                return;
             }
         } else {
             return;
         }
-        __syncthreads();
     }
+
+    // note: Will only reach here when no nonce is found for this thread at the end of search space.
+    atomicAdd(&num_thread_failure, 1);
+    printf("1 thread has failed.\n");
     return;
 }
 
@@ -208,7 +230,8 @@ int main(int argc, char **argv) {
 
             // Convert string o usigned long long for "n"
             char* endptr = NULL;
-            unsigned long long unified_n_decimal = strtoll(n_decimal_string.c_str(), &endptr, 10);
+            unsigned long long n_decimal = strtoll(n_decimal_string.c_str(), &endptr, 10);
+            num_thread_failure = 0;
             printf("~~~~~~~~~~ Pre-processing done ~~~~~~~~~~ \n");
 
             // Copy over values to unified memory for CPU & GPU
@@ -218,44 +241,59 @@ int main(int argc, char **argv) {
             for (int i = 0; i < 44; i ++) {
                 unified_prepend_byte_array[i] = prepend_array[i];
             }
-            
-            // TODO: Alternative memory access method for Analysis
-            // cudaError_t rc = cudaMemcpyToSymbol(device_prepend_byte_array, &prepend_array, sizeof(device_prepend_byte_array));
-            // if (rc != cudaSuccess) {
-            //     printf("Could not copy to device. Reason %s\n", cudaGetErrorString(rc));
-            // }
+
             // Set unified_found_res to be false initially. Will be set to true after nonce is found
             unified_found_res = false;
             printf("~~~~~~~~~~ Copying data to unified memory done ~~~~~~~~~~ \n");
 
-            // Search for nonce
-            int num_thread_blocks = 64; // Each block will search (2^64 / 16) = 2^60 range
-            int num_threads_per_block = 256; // Each thread will search (2^60 / 128) = 2^53 range
-            int chunk = 256; // Each thread will sync after 256 guesses. Number of loops(synchronisations) for worst case scenario: (2^53 / 256)
-            unsigned long long block_search_space = pow(2, 64) / num_thread_blocks;
-
-            clock_t parallel_time = clock();
-            printf("> Executing parallel code to find nonce below n_decimal: %llu ...\n", unified_n_decimal);
-            find_nonce<<<num_thread_blocks, num_threads_per_block>>>(chunk, num_thread_blocks, num_threads_per_block, block_search_space, unified_n_decimal);
-            cudaDeviceSynchronize(); 
-            parallel_time = clock() - parallel_time;
+            // Initialize GPU parameters
+            int num_blocks_per_grid = 1; // Each block will search (2^64 / 16) = 2^60 range
+            int num_threads_per_block = 1; // Each thread will search (2^60 / 128) = 2^53 range
+            bool runBlock = false;
+            unsigned long long thread_search_space = pow(2, 64) / (num_blocks_per_grid * num_threads_per_block);
             
-            printf("~~~~~~~~~~ Found nonce ~~~~~~~~~~\n");
-            cout << "> Parallel execution took: " << (float)parallel_time/CLOCKS_PER_SEC << " seconds" << endl;
-            printf("Output: \n");
-            // Nonce is found. Copy results in device memory to host memory
-            printf("%s\n", nus_net_id.c_str());
-            printf("%ld\n", time_now);
-            printf("%llu\n", unified_nonce_answer);
-            char buffer [65];
-            buffer[64] = 0;
-            for(int j = 0; j < 32; j++) {
-                sprintf(&buffer[2*j], "%02X", unified_digest_answer[j]);
+            // Run GPU code
+            printf("> Executing parallel code to find nonce below n_decimal: %llu ...\n", n_decimal);
+            find_nonce<<<num_blocks_per_grid, num_threads_per_block>>>(thread_search_space, n_decimal, runBlock);
+
+            // Wait for all threads to end & log the time
+            cudaDeviceSynchronize(); 
+            check_cuda_errors();
+            
+            // Output data
+            if (unified_found_res) {
+                printf("~~~~~~~~~~ Found nonce ~~~~~~~~~~\n");
+                printf("Output: \n");
+                printf("%s\n", nus_net_id.c_str());
+                printf("%ld\n", time_now);
+                printf("%llu\n", unified_nonce_answer);
+                char buffer [65];
+                buffer[64] = 0;
+                for(int j = 0; j < 32; j++) {
+                    sprintf(&buffer[2*j], "%02X", unified_digest_answer[j]);
+                }
+                printf("%s\n", buffer); // Credit from https://stackoverflow.com/questions/19371845/using-cout-to-print-the-entire-contents-of-a-character-array
+            } else {
+                printf("~~~~~~~~~~ No nonce found ~~~~~~~~~~\n");
             }
-            printf("%s\n", buffer); // Credit from https://stackoverflow.com/questions/19371845/using-cout-to-print-the-entire-contents-of-a-character-array
         }
         file.close();
     }
     printf("\n~~~~~~~~~~ Done ~~~~~~~~~~\n");
     return 0;
 }
+
+// CPU busy wait.
+/*
+while (!unified_found_res) {
+    check_cuda_errors();
+    // No threads found the nonce.
+    if (num_thread_failure == num_blocks_per_grid * num_threads_per_block){
+        break;
+    }
+    // Timeout
+    if (((float)(clock() - parallel_time)/CLOCKS_PER_SEC) > 900) {
+        printf("TIMEOUT.\n");
+        break; 
+    } 
+};*/
